@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OI Scanner">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then((reg) => {
+                console.log('Service worker registered.', reg);
+            });
+        });
+    }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICHOLAS HIGHEST OI SCANNER</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <style>
+        :root { --bg-main: #06080a; --bg-card: rgba(19, 23, 34, 0.95); --border-color: #2a2e39; --text-main: #d1d4dc; --bullish: #089981; --bearish: #f23645; }
+        body { background-color: var(--bg-main); color: var(--text-main); font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at 50% 50%, #10141f 0%, #06080a 100%); min-height: 100vh; }
+        .header-title { font-weight: 800; font-size: 2rem; text-transform: uppercase; letter-spacing: 4px; background: linear-gradient(90deg, #ff9800, #e91e63); -webkit-background-clip: text; -webkit-text-fill-color: transparent; padding: 20px 0 5px 0; margin-bottom: 0;}
+        .card-custom { background: var(--bg-card); backdrop-filter: blur(15px); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .form-control-custom { background: #1e222d; border: 1px solid #363a45; color: #fff; border-radius: 6px; }
+        .form-control-custom:focus { background: #2a2e39; color: #fff; box-shadow: none; border-color: #4db8ff; }
+        .table-terminal { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+        .table-terminal thead th { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #5d606b; text-transform: uppercase; padding: 10px; cursor: pointer; transition: color 0.2s; }
+        .table-terminal thead th:hover { color: #fff; }
+        .table-terminal tbody tr { background: rgba(42, 46, 57, 0.2); transition: 0.2s; }
+        .table-terminal td { padding: 10px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .symbol-clickable { font-weight: 700; color: #4db8ff; cursor: pointer; text-decoration: underline; }
+        .symbol-clickable:hover { color: #fff; }
+        .scroll-container { max-height: 60vh; overflow-y: auto; }
+        .modal-content { background-color: #131722; border: 1px solid #2a2e39; color: #fff; }
+        #chartContainer { width: 100%; height: 500px; position: relative; }
+        #chartLoader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; color: #4db8ff; font-weight: 600; font-family: 'JetBrains Mono', monospace;}
+        .btn-check:checked + .btn { background-color: #2962ff !important; border-color: #2962ff !important; color: white !important; }
+        .glow-alert { animation: pulse-glow 1.5s infinite; font-weight: 800 !important; }
+        @keyframes pulse-glow { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        #liveChartIndicator { position: absolute; top: 10px; left: 10px; z-index: 10; font-size: 0.75rem; background: rgba(8, 153, 129, 0.2); color: #089981; padding: 2px 8px; border-radius: 4px; border: 1px solid #089981; display: none; font-family: 'JetBrains Mono', monospace; }
+
+        /* Draggable TV Styles */
+        .draggable-tv {
+            position: fixed; top: 80px; right: 20px; width: 450px;
+            background: #131722; border: 1px solid #363a45; border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 9999; display: none;
+            overflow: hidden; resize: both; min-width: 300px; min-height: 200px;
+        }
+        .tv-header {
+            padding: 8px 15px; background: #1e222d; cursor: grab; display: flex;
+            justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2e39;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: #ff9800;
+        }
+        .tv-header:active { cursor: grabbing; }
+        #tvVideo { width: 100%; height: calc(100% - 35px); display: block; background: #000; object-fit: contain; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid px-4">
+        
+        <div class="text-center mb-4">
+            <h1 class="header-title">NICHOLAS HIGHEST OI SCANNER</h1>
+            <button class="btn btn-outline-warning btn-sm fw-bold mt-2" onclick="openTV()">📺 WATCH CNBC LIVE</button>
+        </div>
+        
+        <div class="card-custom" id="loginCard">
+            <div class="row g-3">
+                <div class="col-md-3"><label class="small text-muted mb-1">App ID</label><input type="text" class="form-control form-control-custom" id="appId"></div>
+                <div class="col-md-3"><label class="small text-muted mb-1">Secret ID</label><input type="password" class="form-control form-control-custom" id="secretId"></div>
+                <div class="col-md-4"><label class="small text-muted mb-1">Auth Code</label><input type="text" class="form-control form-control-custom" id="authCode"></div>
+                <div class="col-md-2 d-grid align-items-end"><button class="btn btn-success fw-bold" onclick="login()">INITIALIZE</button></div>
+            </div>
+            <div class="text-center mt-3"><button class="btn btn-outline-primary btn-sm" onclick="generateAuthUrl()">GENERATE AUTHORIZATION CODE</button></div>
+        </div>
+
+        <div class="card-custom" id="dataCard" style="display: none;">
+            <div class="row mb-3 g-2 align-items-center">
+                <div class="col-md-3"><input type="text" id="searchInput" class="form-control form-control-custom" placeholder="🔍 Search Stock..." onkeyup="filterTable()"></div>
+                <div class="col-md-2">
+                    <select id="proximityRange" class="form-select form-control-custom" onchange="filterTable(true)">
+                        <option value="all">All Gaps</option>
+                        <option value="0.5">Within 0.5%</option>
+                        <option value="1">Within 1%</option>
+                        <option value="2">Within 2%</option>
+                        <option value="5">Within 5%</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="sideFilter" id="sideAll" value="all" checked onchange="filterTable()">
+                        <label class="btn btn-outline-secondary btn-sm" for="sideAll">Show All</label>
+                        <input type="radio" class="btn-check" name="sideFilter" id="sideCE" value="ce" onchange="filterTable(true)">
+                        <label class="btn btn-outline-danger btn-sm" for="sideCE">Near CE (Resist)</label>
+                        <input type="radio" class="btn-check" name="sideFilter" id="sidePE" value="pe" onchange="filterTable(true)">
+                        <label class="btn btn-outline-success btn-sm" for="sidePE">Near PE (Support)</label>
+                    </div>
+                </div>
+                <div class="col-md-2 text-end"><span id="scanStatus" class="badge border border-secondary text-warning">READY</span></div>
+            </div>
+
+            <div class="scroll-container">
+                <table class="table-terminal text-center" id="oiTable">
+                    <thead style="position: sticky; top: 0; background: #06080a; z-index: 10;">
+                        <tr>
+                            <th class="text-start ps-4">Symbol (Click)</th>
+                            <th>LTP</th>
+                            <th>High CE (Res)</th>
+                            <th onclick="sortTable('ceGap')">Res Gap % ⇅</th>
+                            <th>High PE (Sup)</th>
+                            <th onclick="sortTable('peGap')">Sup Gap % ⇅</th>
+                        </tr>
+                    </thead>
+                    <tbody id="oiTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="tvContainer" class="draggable-tv">
+        <div class="tv-header" id="tvHeader">
+            <span>📺 CNBC TV18 LIVE</span>
+            <button class="btn-close btn-close-white btn-sm" style="font-size: 0.6rem;" onclick="closeTV()"></button>
+        </div>
+        <video id="tvVideo" controls autoplay muted></video>
+    </div>
+
+    <div class="modal fade" id="chartModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="modalTitle" style="font-weight: 700;">Stock Analysis</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" style="position: relative;">
+                    <div id="liveChartIndicator">LIVE AUTO-REFRESH ACTIVE</div>
+                    <div id="chartLoader">Initializing Chart Engine...</div>
+                    <div id="chartContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- Live TV Logic ---
+        let hlsStream = null;
+
+        function openTV() {
+            const tvDiv = document.getElementById('tvContainer');
+            const video = document.getElementById('tvVideo');
+            tvDiv.style.display = 'block';
+
+            const videoSrc = 'https://n18syndication.akamaized.net/bpk-tv/CNBC_Tv18_Prime_HD_NW18_MOB/output01/index.m3u8';
+
+            if (Hls.isSupported()) {
+                if(hlsStream) hlsStream.destroy();
+                hlsStream = new Hls();
+                hlsStream.loadSource(videoSrc);
+                hlsStream.attachMedia(video);
+                hlsStream.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log("Autoplay blocked."));
+                });
+            } 
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoSrc;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                });
+            }
+        }
+
+        function closeTV() {
+            document.getElementById('tvContainer').style.display = 'none';
+            document.getElementById('tvVideo').pause();
+            if(hlsStream) {
+                hlsStream.destroy();
+                hlsStream = null;
+            }
+        }
+
+        dragElement(document.getElementById("tvContainer"));
+
+        function dragElement(elmnt) {
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            if (document.getElementById("tvHeader")) {
+                document.getElementById("tvHeader").onmousedown = dragMouseDown;
+            } else {
+                elmnt.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // --- Core Scanner Logic ---
+        let accessToken = null, globalAppId = null, tvChart = null, candleSeries = null;
+        let stockData = {};
+        let sortDir = { ceGap: 'asc', peGap: 'asc' };
+        let activeChartSymbol = null;
+        let chartRefreshInterval = null;
+        
+        const stocks = ['NSE:DIXON-EQ', 'NSE:INDIGO-EQ', 'NSE:UNOMINDA-EQ', 'NSE:HINDPETRO-EQ', 'NSE:GODREJCP-EQ', 'NSE:M&M-EQ', 'NSE:ICICIPRULI-EQ', 'NSE:PETRONET-EQ', 'NSE:AMBER-EQ', 'NSE:RECLTD-EQ', 'NSE:MAZDOCK-EQ', 'NSE:MOTHERSON-EQ', 'NSE:ADANIGREEN-EQ', 'NSE:ASHOKLEY-EQ', 'NSE:LT-EQ', 'NSE:NTPC-EQ', 'NSE:SHRIRAMFIN-EQ', 'NSE:TVSMOTOR-EQ', 'NSE:BDL-EQ', 'NSE:CAMS-EQ', 'NSE:POWERINDIA-EQ', 'NSE:KAYNES-EQ', 'NSE:GMRAIRPORT-EQ', 'NSE:SAMMAANCAP-EQ', 'NSE:PIDILITIND-EQ', 'NSE:RVNL-EQ', 'NSE:ADANIPORTS-EQ', 'NSE:JIOFIN-EQ', 'NSE:OFSS-EQ', 'NSE:HAL-EQ', 'NSE:POLYCAB-EQ', 'NSE:SIEMENS-EQ', 'NSE:ZOMATO-EQ', 'NSE:PAYTM-EQ', 'NSE:TATAPOWER-EQ', 'NSE:ADANIENSOL-EQ', 'NSE:BEL-EQ', 'NSE:IREDA-EQ', 'NSE:KPITTECH-EQ', 'NSE:COALINDIA-EQ', 'NSE:PFC-EQ', 'NSE:BSE-EQ', 'NSE:HUDCO-EQ', 'NSE:ABB-EQ', 'NSE:HEROMOTOCO-EQ', 'NSE:TRENT-EQ', 'NSE:ADANIENT-EQ', 'NSE:EICHERMOT-EQ', 'NSE:TATAELXSI-EQ', 'NSE:SUZLON-EQ', 'NSE:BPCL-EQ', 'NSE:GAIL-EQ', 'NSE:TATAMOTORS-EQ', 'NSE:BAJAJ-AUTO-EQ', 'NSE:POWERGRID-EQ', 'NSE:HDFCBANK-EQ', 'NSE:SBIN-EQ', 'NSE:KOTAKBANK-EQ', 'NSE:BHARTIARTL-EQ', 'NSE:MARUTI-EQ', 'NSE:ONGC-EQ', 'NSE:RELIANCE-EQ', 'NSE:AXISBANK-EQ', 'NSE:LTF-EQ', 'NSE:PRESTIGE-EQ', 'NSE:LICI-EQ', 'NSE:ABCAPITAL-EQ', 'NSE:HCLTECH-EQ', 'NSE:CHOLAFIN-EQ', 'NSE:DLF-EQ', 'NSE:INDHOTEL-EQ', 'NSE:VBL-EQ', 'NSE:CONCOR-EQ', 'NSE:BAJFINANCE-EQ', 'NSE:JSWENERGY-EQ', 'NSE:MAXHEALTH-EQ', 'NSE:OBEROIRLTY-EQ', 'NSE:CGPOWER-EQ', 'NSE:IRFC-EQ', 'NSE:LUPIN-EQ', 'NSE:CUMMINSIND-EQ', 'NSE:ESCORTS-EQ', 'NSE:IDEA-EQ', 'NSE:TATACOMM-EQ', 'NSE:TORNTPHARM-EQ', 'NSE:PNB-EQ', 'NSE:ZYDUSLIFE-EQ', 'NSE:GMRINFRA-EQ', 'NSE:BHEL-EQ', 'NSE:BANKBARODA-EQ', 'NSE:AUROPHARMA-EQ', 'NSE:PERSISTENT-EQ', 'NSE:COLPAL-EQ', 'NSE:BHARATFORG-EQ', 'NSE:DIVISLAB-EQ', 'NSE:COFORGE-EQ', 'NSE:KEI-EQ', 'NSE:MUTHOOTFIN-EQ', 'NSE:POLICYBZR-EQ', 'NSE:INDIANB-EQ', 'NSE:VOLTAS-EQ', 'NSE:LODHA-EQ', 'NSE:NMDC-EQ', 'NSE:FEDERALBNK-EQ', 'NSE:CANBK-EQ', 'NSE:L&TFH-EQ', 'NSE:JINDALSTEL-EQ', 'NSE:APOLLOTYRE-EQ', 'NSE:METROPOLIS-EQ', 'NSE:MPHASIS-EQ', 'NSE:BOSCHLTD-EQ', 'NSE:ASTRAL-EQ', 'NSE:MFSL-EQ', 'NSE:MCX-EQ', 'NSE:ALKEM-EQ', 'NSE:HDFCAMC-EQ', 'NSE:PIIND-EQ', 'NSE:PAGEIND-EQ', 'NSE:MANKIND-EQ', 'NSE:CDSL-EQ', 'NSE:BALKRISIND-EQ', 'NSE:COROMANDEL-EQ', 'NSE:GLENMARK-EQ', 'NSE:IDFCFIRSTB-EQ', 'NSE:AUBANK-EQ', 'NSE:DALBHARAT-EQ', 'NSE:SBICARD-EQ', 'NSE:GODREJPROP-EQ', 'NSE:HAVELLS-EQ', 'NSE:LTTS-EQ', 'NSE:MARICO-EQ', 'NSE:SHREECEM-EQ', 'NSE:SYNGENE-EQ', 'NSE:TIINDIA-EQ', 'NSE:UBL-EQ', 'NSE:UNIONBANK-EQ', 'NSE:UPL-EQ', 'NSE:AMBUJACEM-EQ', 'NSE:ACC-EQ', 'NSE:ATGL-EQ', 'NSE:AWL-EQ', 'NSE:BANDHANBNK-EQ', 'NSE:BANKINDIA-EQ', 'NSE:BERGEPAINT-EQ', 'NSE:BIOCON-EQ', 'NSE:CROMPTON-EQ', 'NSE:DABUR-EQ', 'NSE:DEEPAKNTR-EQ', 'NSE:DRREDDY-EQ', 'NSE:EXIDEIND-EQ', 'NSE:FORTIS-EQ', 'NSE:GRANULES-EQ', 'NSE:GUJGASLTD-EQ', 'NSE:HDFCLIFE-EQ', 'NSE:ICICIGI-EQ', 'NSE:IEX-EQ', 'NSE:IGL-EQ', 'NSE:INDUSINDBK-EQ', 'NSE:INDUSTOWER-EQ', 'NSE:IPCALAB-EQ', 'NSE:JKCEMENT-EQ', 'NSE:JUBLFOOD-EQ', 'NSE:LALPATHLAB-EQ', 'NSE:LAURUSLABS-EQ', 'NSE:LICHSGFIN-EQ', 'NSE:MGL-EQ', 'NSE:MRF-EQ', 'NSE:NATIONALUM-EQ', 'NSE:NAUKRI-EQ', 'NSE:PEL-EQ', 'NSE:PPLPHARMA-EQ', 'NSE:RAMCOCEM-EQ', 'NSE:SAIL-EQ', 'NSE:SBILIFE-EQ', 'NSE:SRF-EQ', 'NSE:TATACHEM-EQ', 'NSE:TORNTPOWER-EQ', 'NSE:UNITDSPR-EQ'];
+
+        // --- SHARED AUTH SYNC ENGINE ---
+        function checkGlobalAuth() {
+            const sharedToken = localStorage.getItem('fyers_shared_token');
+            const sharedAppId = localStorage.getItem('fyers_shared_appid');
+
+            if (sharedToken && sharedAppId) {
+                accessToken = sharedToken;
+                globalAppId = sharedAppId;
+                
+                document.getElementById('loginCard').style.display = 'none';
+                document.getElementById('dataCard').style.display = 'block';
+                
+                console.log("🚀 Auto-Authenticated using Shared Session");
+                startOIScan(); 
+                startLTPPolling();
+            }
+        }
+
+        window.onload = () => {
+            checkGlobalAuth();
+            document.getElementById('appId').value = localStorage.getItem('fyers_appId') || '';
+            document.getElementById('secretId').value = localStorage.getItem('fyers_secretId') || '';
+        };
+
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'fyers_shared_token') {
+                location.reload(); 
+            }
+        });
+
+        document.getElementById('chartModal').addEventListener('hidden.bs.modal', function () {
+            activeChartSymbol = null;
+            if (chartRefreshInterval) clearInterval(chartRefreshInterval);
+            document.getElementById('liveChartIndicator').style.display = 'none';
+        });
+
+        function generateAuthUrl() {
+            const id = document.getElementById('appId').value.trim();
+            if(!id) return alert("Enter App ID.");
+            const url = `https://api-t1.fyers.in/api/v3/generate-authcode?client_id=${id}&redirect_uri=https://trade.fyers.in/api-login/redirect-uri/index.html&response_type=code&state=sample`;
+            window.open(url, '_blank');
+        }
+
+        async function login() {
+            const appId = document.getElementById('appId').value.trim();
+            const secret = document.getElementById('secretId').value.trim();
+            const code = document.getElementById('authCode').value.trim();
+            localStorage.setItem('fyers_appId', appId);
+            localStorage.setItem('fyers_secretId', secret);
+            try {
+                const hash = CryptoJS.SHA256(`${appId}:${secret}`).toString();
+                const res = await axios.post('https://api-t1.fyers.in/api/v3/validate-authcode', { grant_type: 'authorization_code', appIdHash: hash, code: code });
+                accessToken = res.data.access_token;
+                globalAppId = appId;
+
+                // SET SHARED SESSION
+                localStorage.setItem('fyers_shared_token', accessToken);
+                localStorage.setItem('fyers_shared_appid', globalAppId);
+
+                document.getElementById('loginCard').style.display = 'none';
+                document.getElementById('dataCard').style.display = 'block';
+                startOIScan(); startLTPPolling();
+            } catch (e) { alert("Initialization Failed."); }
+        }
+
+        async function showChart(symbol) {
+            const data = stockData[symbol];
+            activeChartSymbol = symbol;
+            const modalTitle = document.getElementById('modalTitle');
+            const loader = document.getElementById('chartLoader');
+            const container = document.getElementById('chartContainer');
+            modalTitle.textContent = `Analyzing ${symbol.split(':')[1]}...`;
+            loader.style.display = 'block';
+            if (tvChart) { try { tvChart.remove(); } catch(e) {} tvChart = null; }
+            container.innerHTML = '';
+            const myModal = new bootstrap.Modal(document.getElementById('chartModal'));
+            myModal.show();
+
+            setTimeout(async () => {
+                try {
+                    tvChart = LightweightCharts.createChart(container, {
+                        layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+                        grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
+                        timeScale: { timeVisible: true, borderColor: '#2a2e39' },
+                    });
+                    candleSeries = tvChart.addCandlestickSeries({ upColor: '#089981', downColor: '#f23645' });
+                    const to = Math.floor(Date.now() / 1000);
+                    const from = to - (86400 * 5);
+                    const res = await axios.get(`https://api-t1.fyers.in/data/history?symbol=${symbol.replace(/&/g, '%26')}&resolution=15&date_format=0&range_from=${from}&range_to=${to}&cont_flag=1`, {
+                        headers: { 'Authorization': `${globalAppId}:${accessToken}` }
+                    });
+                    if (res.data.s === "ok" && res.data.candles && res.data.candles.length > 0) {
+                        let formatted = res.data.candles.map(c => ({
+                            time: c[0] + 19800, open: c[1], high: c[2], low: c[3], close: c[4]
+                        })).sort((a,b) => a.time - b.time);
+                        formatted = formatted.filter((v, i, a) => i === 0 || v.time !== a[i-1].time);
+                        candleSeries.setData(formatted);
+                        candleSeries.createPriceLine({ price: data.ce, color: '#f23645', lineWidth: 2, axisLabelVisible: true, title: 'RES (CE)' });
+                        candleSeries.createPriceLine({ price: data.pe, color: '#089981', lineWidth: 2, axisLabelVisible: true, title: 'SUP (PE)' });
+                        tvChart.timeScale().fitContent();
+                        modalTitle.textContent = `${symbol.split(':')[1]} - 15m Live Chart`;
+                        loader.style.display = 'none';
+                        document.getElementById('liveChartIndicator').style.display = 'block';
+                        startChartAutoRefresh();
+                    } else { loader.textContent = "Data Unavailable"; }
+                } catch (e) { loader.textContent = `API Error`; }
+            }, 600);
+        }
+
+        function startChartAutoRefresh() {
+            if (chartRefreshInterval) clearInterval(chartRefreshInterval);
+            chartRefreshInterval = setInterval(async () => {
+                if (!activeChartSymbol || !candleSeries) return;
+                const to = Math.floor(Date.now() / 1000);
+                const from = to - 86400; 
+                try {
+                    const res = await axios.get(`https://api-t1.fyers.in/data/history?symbol=${activeChartSymbol.replace(/&/g, '%26')}&resolution=15&date_format=0&range_from=${from}&range_to=${to}&cont_flag=1`, {
+                        headers: { 'Authorization': `${globalAppId}:${accessToken}` }
+                    });
+                    if (res.data.s === "ok" && res.data.candles && res.data.candles.length > 0) {
+                        const last = res.data.candles[res.data.candles.length - 1];
+                        candleSeries.update({ time: last[0] + 19800, open: last[1], high: last[2], low: last[3], close: last[4] });
+                    }
+                } catch (e) { }
+            }, 3000); 
+        }
+
+        async function startOIScan() {
+            while(true) {
+                for (let i = 0; i < stocks.length; i++) {
+                    await fetchOI(stocks[i]);
+                    await new Promise(r => setTimeout(r, 200)); 
+                }
+                await new Promise(r => setTimeout(r, 60000));
+            }
+        }
+
+        async function fetchOI(symbol) {
+            try {
+                const res = await axios.get(`https://api-t1.fyers.in/data/options-chain-v3?symbol=${symbol.replace(/&/g, '%26')}&strikecount=50`, {
+                    headers: { 'Authorization': `${globalAppId}:${accessToken}` }
+                });
+                if (res.data?.data?.optionsChain) {
+                    const chain = res.data.data.optionsChain;
+                    const ce = chain.filter(o => o.option_type === "CE").sort((a,b) => b.oi - a.oi)[0].strike_price;
+                    const pe = chain.filter(o => o.option_type === "PE").sort((a,b) => b.oi - a.oi)[0].strike_price;
+                    stockData[symbol] = { ce, pe, ltp: stockData[symbol]?.ltp || 0 };
+                    renderRow(symbol);
+                }
+            } catch (e) { }
+        }
+
+        function renderRow(symbol) {
+            const id = symbol.replace(/\W/g, '_');
+            const tbody = document.getElementById('oiTableBody');
+            if (!document.getElementById(`row-${id}`)) {
+                const tr = document.createElement('tr');
+                tr.id = `row-${id}`;
+                tbody.appendChild(tr);
+            }
+            updateRowUI(symbol);
+        }
+
+        async function startLTPPolling() {
+            setInterval(async () => {
+                const chunkSize = 50;
+                for (let i = 0; i < stocks.length; i += chunkSize) {
+                    const chunk = stocks.slice(i, i + chunkSize);
+                    try {
+                        const res = await axios.get(`https://api-t1.fyers.in/data/quotes?symbols=${chunk.join(',').replace(/&/g, '%26')}`, {
+                            headers: { 'Authorization': `${globalAppId}:${accessToken}` }
+                        });
+                        if (res.data.d) {
+                            res.data.d.forEach(item => {
+                                if (stockData[item.n]) {
+                                    stockData[item.n].ltp = item.v.lp;
+                                    updateRowUI(item.n);
+                                }
+                            });
+                        }
+                    } catch (e) { }
+                }
+                filterTable(false);
+            }, 3000);
+        }
+
+        function updateRowUI(symbol) {
+            const id = symbol.replace(/\W/g, '_');
+            const data = stockData[symbol];
+            const row = document.getElementById(`row-${id}`);
+            if (!row || !data) return;
+            const ceGapVal = data.ltp ? Math.abs(((data.ce - data.ltp) / data.ltp) * 100) : 9999;
+            const peGapVal = data.ltp ? Math.abs(((data.ltp - data.pe) / data.ltp) * 100) : 9999;
+            const ceGapText = ceGapVal === 9999 ? '--' : ceGapVal.toFixed(2);
+            const peGapText = peGapVal === 9999 ? '--' : peGapVal.toFixed(2);
+            const ceAlertClass = ceGapVal <= 1 ? "glow-alert" : "";
+            const peAlertClass = peGapVal <= 1 ? "glow-alert" : "";
+            row.innerHTML = `
+                <td class="text-start ps-4"><span class="symbol-clickable" onclick="showChart('${symbol}')">${symbol.split(':')[1].replace('-EQ','')}</span></td>
+                <td class="ltp-box">${data.ltp || '--'}</td>
+                <td class="res-strike">${data.ce}</td>
+                <td class="fw-bold ${ceAlertClass}" style="color: var(--bearish)">${ceGapText}%</td>
+                <td class="sup-strike">${data.pe}</td>
+                <td class="fw-bold ${peAlertClass}" style="color: var(--bullish)">${peGapText}%</td>
+            `;
+            row.dataset.ceGap = ceGapVal;
+            row.dataset.peGap = peGapVal;
+        }
+
+        function filterTable(autoSort = false) {
+            const search = document.getElementById('searchInput').value.toUpperCase();
+            const range = document.getElementById('proximityRange').value;
+            const side = document.querySelector('input[name="sideFilter"]:checked').value;
+            const rows = document.querySelectorAll('#oiTableBody tr');
+            const rLimit = range === 'all' ? 9999 : parseFloat(range);
+            rows.forEach(row => {
+                const text = row.innerText.toUpperCase();
+                const ceGap = parseFloat(row.dataset.ceGap);
+                const peGap = parseFloat(row.dataset.peGap);
+                let matchesSearch = text.includes(search);
+                let matchesRange = true;
+                if (side === 'ce') matchesRange = ceGap <= rLimit;
+                else if (side === 'pe') matchesRange = peGap <= rLimit;
+                else matchesRange = (ceGap <= rLimit || peGap <= rLimit);
+                row.style.display = (matchesSearch && matchesRange) ? "" : "none";
+            });
+            if (autoSort) {
+                if (side === 'ce') { sortDir.ceGap = 'asc'; sortTable('ceGap', true); }
+                if (side === 'pe') { sortDir.peGap = 'asc'; sortTable('peGap', true); }
+            }
+        }
+
+        function sortTable(type, forceAsc = false) {
+            const tbody = document.getElementById("oiTableBody");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            if (forceAsc) sortDir[type] = 'asc';
+            const dir = sortDir[type] === 'asc' ? 1 : -1;
+            rows.sort((a, b) => {
+                const valA = parseFloat(a.dataset[type]);
+                const valB = parseFloat(b.dataset[type]);
+                return (valA - valB) * dir;
+            });
+            if (!forceAsc) sortDir[type] = sortDir[type] === 'asc' ? 'desc' : 'asc';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>
